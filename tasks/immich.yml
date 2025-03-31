@@ -1,0 +1,87 @@
+---
+- name: Deploy immich redis container
+  community.docker.docker_container:
+    name: immich_redis
+    image: redis
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+
+- name: Deploy immich postgres container
+  community.docker.docker_container:
+    name: immich_db
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      POSTGRES_USER: "{{ immich_db_username }}"
+      POSTGRES_PASSWORD: "{{ immich_db_password }}"
+      POSTGRES_DB: "{{ immich_db_name }}"
+    volumes:
+      - "{{ docker_dir }}/immich/postgres:/var/lib/postgresql/data"
+
+- name: Add immich dotfiles directories
+  ansible.builtin.file:
+    path: "{{ data_dir }}/immich/photos/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - library
+    - encoded-video
+    - upload
+    - profile
+    - thumbs
+    - backups
+
+- name: Add immich dotfiles
+  ansible.builtin.file:
+    path: "{{ data_dir }}/immich/photos/{{ item }}/.immich"
+    state: touch
+    mode: "0755"
+  loop:
+    - library
+    - encoded-video
+    - upload
+    - profile
+    - thumbs
+    - backups
+
+- name: Deploy immich server container
+  community.docker.docker_container:
+    name: immich
+    image: ghcr.io/imagegenius/immich
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      PUID: "{{ puid }}"
+      PGID: "{{ puid }}"
+      TZ: "{{ timezone }}"
+      DB_HOSTNAME: immich_db
+      DB_USERNAME: "{{ immich_db_username }}"
+      DB_PASSWORD: "{{ immich_db_password }}"
+      DB_DATABASE_NAME: "{{ immich_db_name }}"
+      REDIS_HOSTNAME: immich_redis
+      DB_PORT: "5432"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      MACHINE_LEARNING_HOST: "0.0.0.0"
+      MACHINE_LEARNING_PORT: "3003"
+      MACHINE_LEARNING_WORKERS: "1"
+      MACHINE_LEARNING_WORKER_TIMEOUT: "120"
+    volumes:
+      - "{{ docker_dir }}/immich:/config"
+      - "{{ data_dir }}/immich/photos:/photos"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.immich.entrypoints: "http"
+      traefik.http.routers.immich.rule: "Host(`immich.{{ domain }}`)"
+      traefik.http.middlewares.immich-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.immich.middlewares: "immich-https-redirect"
+      traefik.http.routers.immich-secure.entrypoints: "https"
+      traefik.http.routers.immich-secure.rule: "Host(`immich.{{ domain }}`)"
+      traefik.http.routers.immich-secure.tls: "true"
+      traefik.http.routers.immich-secure.service: "immich"
+      traefik.http.services.immich.loadbalancer.server.port: "8080"
+      traefik.docker.network: "homelab"

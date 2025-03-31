@@ -1,0 +1,55 @@
+---
+- name: Setup the homeserver
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update server and install essential packages
+      ansible.builtin.include_tasks: tasks/essential.yml
+
+    - name: Install Docker and Docker Compose
+      ansible.builtin.include_tasks: tasks/docker.yml
+
+    - name: Deploy apps
+      ansible.builtin.include_tasks: "tasks/{{ item }}.yml"
+      loop:
+        - traefik
+        - bazarr
+        - beszel
+        - code_server
+        - dashdot
+        - file_browser
+        - frigate
+        - guacamole
+        - hoarder
+        - homarr
+        - home_assistant
+        - immich
+        - jellyfin
+        - jellyseerr
+        - kopia
+        - librum
+        - monitoring
+        - nextcloud
+        - portainer
+        - prowlarr
+        - qbittorrent
+        - radarr
+        - readarr
+        - sonarr
+        - speedtest_tracker
+        - syncthing
+        - tailscale
+        - uptime_kuma
+        - vaultwarden
+        - vikunja
+        - watchtower
+
+    - name: Modify ownership of data and docker_apps directories
+      ansible.builtin.include_tasks: tasks/fix_ownership.yml
+
+    - name: Reboot the server
+      ansible.builtin.reboot:
+        msg: "Rebooting the server to finalize the setup."
+        reboot_timeout: 600
+        test_command: whoami

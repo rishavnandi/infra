@@ -1,0 +1,249 @@
+---
+- name: Create config directories
+  ansible.builtin.file:
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    dest: "{{ docker_dir }}/monitoring/{{ item }}"
+  loop:
+    - prometheus
+    - grafana
+    - influxdb
+    - loki
+    - promtail
+    - telegraf
+
+- name: Create prometheus.yml file
+  ansible.builtin.copy:
+    dest: "{{ docker_dir }}/monitoring/prometheus/prometheus.yml"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    content: |
+      global:
+        scrape_interval:     15s
+        evaluation_interval: 30s
+        body_size_limit: 15MB
+        sample_limit: 1500
+        target_limit: 30
+        label_limit: 30
+        label_name_length_limit: 200
+        label_value_length_limit: 200
+
+- name: Create telegraf config file
+  ansible.builtin.copy:
+    dest: "{{ docker_dir }}/monitoring/telegraf/telegraf.conf"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    content: |
+      [[inputs.docker]]
+        endpoint = "unix:///var/run/docker.sock"
+        gather_services = false
+        container_names = []
+        source_tag = false
+        container_name_include = []
+        container_name_exclude = []
+        timeout = "5s"
+        perdevice = true
+        total = false
+        tag_env = ['JAVA_HOME', "HEAP_SIZE"]
+      [[outputs.influxdb_v2]]
+        urls = ["http://influxdb:8086"]
+        token = "{{ influxdb_token }}"
+        organization = "home"
+        bucket = "homelab"
+
+- name: Create loki config
+  ansible.builtin.copy:
+    dest: "{{ docker_dir }}/monitoring/loki/loki-config.yml"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    content: |
+      auth_enabled: false
+
+      server:
+        http_listen_port: 3100
+
+      common:
+        instance_addr: 127.0.0.1
+        path_prefix: /loki
+        storage:
+          filesystem:
+            chunks_directory: /loki/chunks
+            rules_directory: /loki/rules
+        replication_factor: 1
+        ring:
+          kvstore:
+            store: inmemory
+
+      schema_config:
+        configs:
+          - from: 2020-10-24
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+
+      ruler:
+        alertmanager_url: http://localhost:9093
+
+- name: Create promtail config
+  ansible.builtin.copy:
+    dest: "{{ docker_dir }}/monitoring/promtail/promtail-config.yml"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    content: |
+      server:
+        http_listen_port: 9080
+        grpc_listen_port: 0
+
+      positions:
+        filename: /tmp/positions.yaml
+
+      clients:
+        - url: http://loki:3100/loki/api/v1/push
+
+      scrape_configs:
+
+      # local machine logs
+
+      - job_name: local
+        static_configs:
+        - targets:
+            - localhost
+          labels:
+            job: varlogs
+            __path__: /var/log/*log
+        
+      # docker logs
+
+      - job_name: docker 
+        pipeline_stages:
+          - docker: {}
+        static_configs:
+          - labels:
+              job: docker
+              __path__: /var/lib/docker/containers/*/*-json.log
+
+- name: Install Loki Docker Driver
+  community.docker.docker_plugin:
+    plugin_name: grafana/loki-docker-driver
+    alias: loki
+    state: enable
+
+- name: Edit the docker daemon config
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    content: |
+      {
+          "log-driver": "loki",
+          "log-opts": {
+              "loki-url": "http://localhost:3100/loki/api/v1/push",
+              "loki-batch-size": "400"
+          }
+      }
+
+- name: Deploy loki container
+  community.docker.docker_container:
+    name: loki
+    image: grafana/loki
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    command: "-config.file=/etc/loki/loki-config.yml"
+    volumes:
+      - "{{ docker_dir }}/monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml"
+    ports:
+      - "3100:3100"
+
+- name: Deploy promtail container
+  community.docker.docker_container:
+    name: promtail
+    image: grafana/promtail
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    command: "-config.file=/etc/promtail/promtail-config.yml"
+    volumes:
+      - "{{ docker_dir }}/monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml"
+      - /var/log:/var/log
+    ports:
+      - "1514:1514"
+
+- name: Deploy grafana container
+  community.docker.docker_container:
+    name: grafana
+    image: grafana/grafana
+    restart_policy: unless-stopped
+    user: "{{ puid }}:{{ pgid }}"
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/monitoring/grafana:/var/lib/grafana"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.grafana.entrypoints: "http"
+      traefik.http.routers.grafana.rule: "Host(`grafana.{{ domain }}`)"
+      traefik.http.middlewares.grafana-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.grafana.middlewares: "grafana-https-redirect"
+      traefik.http.routers.grafana-secure.entrypoints: "https"
+      traefik.http.routers.grafana-secure.rule: "Host(`grafana.{{ domain }}`)"
+      traefik.http.routers.grafana-secure.tls: "true"
+      traefik.http.routers.grafana-secure.service: "grafana"
+      traefik.http.services.grafana.loadbalancer.server.port: "3000"
+      traefik.docker.network: "homelab"
+
+- name: Deploy influxdb container
+  community.docker.docker_container:
+    name: influxdb
+    image: influxdb
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/monitoring/influxdb:/var/lib/influxdb"
+    ports:
+      - "8086:8086"
+      - "8089:8089/udp"
+
+- name: Deploy telegraf container
+  community.docker.docker_container:
+    name: telegraf
+    image: telegraf
+    restart_policy: unless-stopped
+    user: "telegraf:{{ puid }}"
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/monitoring/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro"
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    env:
+      HOST_ETC: "/hostfs/etc"
+      HOST_PROC: "/hostfs/proc"
+      HOST_SYS: "/hostfs/sys"
+      HOST_VAR: "/hostfs/var"
+      HOST_RUN: "/hostfs/run"
+      HOST_MOUNT_PREFIX: "/hostfs"
+
+- name: Deploy prometheus container
+  community.docker.docker_container:
+    name: prometheus
+    image: prom/prometheus
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    ports:
+      - "9090:9090"

@@ -1,0 +1,27 @@
+---
+- name: Deploy bazarr container
+  community.docker.docker_container:
+    name: bazarr
+    image: lscr.io/linuxserver/bazarr
+    restart_policy: unless-stopped
+    env:
+      PUID: "{{ puid }}"
+      PGID: "{{ pgid }}"
+      TZ: "{{ timezone }}"
+    volumes:
+      - "{{ docker_dir }}/bazarr/config:/config"
+      - "{{ data_dir }}/media:/data/media"
+    networks:
+      - name: homelab
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.bazarr.entrypoints: "http"
+      traefik.http.routers.bazarr.rule: "Host(`bazarr.{{ domain }}`)"
+      traefik.http.middlewares.bazarr-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.bazarr.middlewares: "bazarr-https-redirect"
+      traefik.http.routers.bazarr-secure.entrypoints: "https"
+      traefik.http.routers.bazarr-secure.rule: "Host(`bazarr.{{ domain }}`)"
+      traefik.http.routers.bazarr-secure.tls: "true"
+      traefik.http.routers.bazarr-secure.service: "bazarr"
+      traefik.http.services.bazarr.loadbalancer.server.port: "6767"
+      traefik.docker.network: "homelab"

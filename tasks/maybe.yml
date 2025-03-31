@@ -1,0 +1,79 @@
+---
+- name: Deploy maybe db container
+  community.docker.docker_container:
+    name: maybe_db
+    image: postgres:16
+    restart_policy: unless-stopped
+    env:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: maybe_production
+    volumes:
+      - "{{ docker_dir }}/maybe/db:/var/lib/postgresql/data"
+    networks:
+      - name: homelab
+
+- name: Deploy maybe redis container
+  community.docker.docker_container:
+    name: maybe_redis
+    image: redis
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ docker_dir }}/maybe/redis:/data"
+    networks:
+      - name: homelab
+    ports:
+      - "6379:6379"
+
+- name: Deploy maybe web container
+  community.docker.docker_container:
+    name: maybe_web
+    image: ghcr.io/maybe-finance/maybe
+    restart_policy: unless-stopped
+    env:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "admin"
+      POSTGRES_DB: "maybe_production"
+      SECRET_KEY_BASE: "a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13"
+      SELF_HOSTED: "true"
+      RAILS_FORCE_SSL: "false"
+      RAILS_ASSUME_SSL: "false"
+      DB_HOST: "maybe_db"
+      DB_PORT: "5432"
+      REDIS_URL: "redis://maybe_redis:6379/1"
+    volumes:
+      - "{{ docker_dir }}/maybe/storage:/rails/storage"
+    networks:
+      - name: homelab
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.maybe.entrypoints: "http"
+      traefik.http.routers.maybe.rule: "Host(`maybe.{{ domain }}`)"
+      traefik.http.middlewares.maybe-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.maybe.middlewares: "maybe-https-redirect"
+      traefik.http.routers.maybe-secure.entrypoints: "https"
+      traefik.http.routers.maybe-secure.rule: "Host(`maybe.{{ domain }}`)"
+      traefik.http.routers.maybe-secure.tls: "true"
+      traefik.http.routers.maybe-secure.service: "maybe"
+      traefik.http.services.maybe.loadbalancer.server.port: "3000"
+      traefik.docker.network: "homelab"
+
+- name: Deploy maybe worker container
+  community.docker.docker_container:
+    name: maybe_worker
+    image: ghcr.io/maybe-finance/maybe
+    restart_policy: unless-stopped
+    command: bundle exec sidekiq
+    env:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "admin"
+      POSTGRES_DB: "maybe_production"
+      SECRET_KEY_BASE: "a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13"
+      SELF_HOSTED: "true"
+      RAILS_FORCE_SSL: "false"
+      RAILS_ASSUME_SSL: "false"
+      DB_HOST: "maybe_db"
+      DB_PORT: "5432"
+      REDIS_URL: "redis://maybe_redis:6379/1"
+    networks:
+      - name: homelab

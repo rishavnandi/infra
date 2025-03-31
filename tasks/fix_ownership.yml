@@ -1,0 +1,20 @@
+---
+- name: Add required permissions to data and docker_apps directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    recurse: true
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+  loop:
+    - "{{ docker_dir }}"
+    - "{{ data_dir }}"
+
+- name: Make sure traefik acme.json permissions are correct
+  ansible.builtin.file:
+    path: "{{ docker_dir }}/traefik/data/acme.json"
+    state: touch
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0600"

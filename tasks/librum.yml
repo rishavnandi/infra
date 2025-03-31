@@ -1,0 +1,57 @@
+---
+- name: Create librum and librum_db docker volumes
+  community.docker.docker_volume:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - librum
+    - librum_db
+
+- name: Deploy librum database
+  community.docker.docker_container:
+    name: librum_db
+    image: mariadb
+    restart_policy: unless-stopped
+    hostname: mariadb
+    networks:
+      - name: homelab
+    volumes:
+      - librum_db:/var/lib/mysql
+    env:
+      MARIADB_USER: librum
+      MARIADB_PASSWORD: mariadb
+      MARIADB_DATABASE: librum
+      MARIADB_ROOT_PASSWORD: mariadb
+
+- name: Wait for librum database to be ready
+  ansible.builtin.wait_for:
+    timeout: 30
+
+- name: Deploy librum container
+  community.docker.docker_container:
+    name: librum
+    image: ghcr.io/librum-reader/librum-server
+    restart_policy: unless-stopped
+    hostname: librum
+    networks:
+      - name: homelab
+    volumes:
+      - librum:/var/lib/librum-server/librum_storage
+    env:
+      JWTValidIssuer: "{{ librum_admin_password }}"
+      JWTKey: "{{ librum_admin_password }}"
+      DBConnectionString: "Server=mariadb;port=3306;Database=librum;Uid=librum;Pwd=mariadb;"
+      AdminEmail: "{{ cloudflare_email }}"
+      AdminPassword: "{{ librum_admin_password }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.librum.entrypoints: "http"
+      traefik.http.routers.librum.rule: "Host(`librum.{{ domain }}`)"
+      traefik.http.middlewares.librum-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.librum.middlewares: "librum-https-redirect"
+      traefik.http.routers.librum-secure.entrypoints: "https"
+      traefik.http.routers.librum-secure.rule: "Host(`librum.{{ domain }}`)"
+      traefik.http.routers.librum-secure.tls: "true"
+      traefik.http.routers.librum-secure.service: "librum"
+      traefik.http.services.librum.loadbalancer.server.port: "5000"
+      traefik.docker.network: "homelab"

@@ -1,0 +1,71 @@
+---
+username: "rishav"
+
+docker_dir: "/home/{{ username }}/docker_apps"
+data_dir: "/home/{{ username }}/data"
+
+pgid: "1000"
+puid: "1000"
+
+server_ip: "192.168.1.10"
+
+timezone: "Asia/Kolkata"
+
+domain: "redacted"
+
+cloudflare_email: "redacted"
+cloudflare_api_key: "redacted"
+
+traefik_basic_auth_hash: "redacted"
+
+beszel_agent_key: "redacted"
+
+codeserver_password: "redacted"
+
+kopia_password: "redacted"
+
+immich_db_name: "immich"
+immich_db_username: "admin"
+immich_db_password: "redacted"
+
+hoarder_meili_master_key: "redacted"
+hoarder_nextauth_secret: "redacted"
+
+vikunja_jwt_secret: "redacted"
+
+frigate_rtsp_password: "redacted"
+
+librum_admin_password: "redacted"
+
+influxdb_token: "redacted"
+
+speedtest_tracker_app_key: "redacted"
+
+homarr_secret_key: "redacted"
+
+tailscale_auth_key: "redacted"
+
+packages:
+  - unzip
+  - wget
+  - curl
+  - git
+  - python3
+  - python3-pip
+
+pip_packages:
+  - ansible
+  - github3.py
+  - docker
+
+docker_dependencies:
+  - ca-certificates
+  - gnupg
+  - curl
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin

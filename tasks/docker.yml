@@ -1,0 +1,53 @@
+---
+- name: Set amd64 architecture
+  ansible.builtin.set_fact:
+    docker_arch: amd64
+  when: ansible_architecture == 'x86_64'
+
+- name: Set arm64 architecture
+  ansible.builtin.set_fact:
+    docker_arch: arm64
+  when: ansible_architecture == 'aarch64'
+
+- name: Install docker dependencies
+  ansible.builtin.package:
+    name: "{{ docker_dependencies }}"
+    state: present
+
+- name: Add docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add docker repository
+  ansible.builtin.apt_repository:
+    repo: deb [arch={{ docker_arch }}] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    state: present
+
+- name: Install docker
+  ansible.builtin.package:
+    name: "{{ docker_packages }}"
+    state: present
+
+- name: Ensure docker group exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Add user to docker group
+  ansible.builtin.user:
+    name: "{{ username }}"
+    groups: docker
+    append: true
+
+- name: Start and enable docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create custom docker network
+  community.docker.docker_network:
+    name: homelab
+    state: present
+    driver: bridge

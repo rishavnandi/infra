@@ -1,0 +1,27 @@
+---
+- name: Deploy vikunja container
+  community.docker.docker_container:
+    name: vikunja
+    image: vikunja/vikunja
+    restart_policy: unless-stopped
+    env:
+      VIKUNJA_SERVICE_PUBLICURL: "https://vikunja.{{ domain }}"
+      VIKUNJA_SERVICE_JWTSECRET: "{{ vikunja_jwt_secret }}"
+      VIKUNJA_DATABASE_PATH: "/db/vikunja.db"
+    volumes:
+      - "{{ docker_dir }}/vikunja/files:/app/vikunja/files"
+      - "{{ docker_dir }}/vikunja/db:/db"
+    networks:
+      - name: homelab
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.vikunja.entrypoints: "http"
+      traefik.http.routers.vikunja.rule: "Host(`vikunja.{{ domain }}`)"
+      traefik.http.middlewares.vikunja-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.vikunja.middlewares: "vikunja-https-redirect"
+      traefik.http.routers.vikunja-secure.entrypoints: "https"
+      traefik.http.routers.vikunja-secure.rule: "Host(`vikunja.{{ domain }}`)"
+      traefik.http.routers.vikunja-secure.tls: "true"
+      traefik.http.routers.vikunja-secure.service: "vikunja"
+      traefik.http.services.vikunja.loadbalancer.server.port: "3456"
+      traefik.docker.network: "homelab"

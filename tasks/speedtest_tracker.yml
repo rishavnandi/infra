@@ -1,0 +1,30 @@
+---
+- name: Deploy speedtest tracker container
+  community.docker.docker_container:
+    name: speedtest_tracker
+    image: lscr.io/linuxserver/speedtest-tracker
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      PUID: "{{ puid }}"
+      PGID: "{{ pgid }}"
+      APP_KEY: "{{ speedtest_tracker_app_key }}"
+      APP_URL: "https://speed.{{ domain }}"
+      ASSET_URL: "https://speed.{{ domain }}"
+      SPEEDTEST_SCHEDULE: "*/30 * * * *"
+      SPEEDTEST_SERVERS: "64572"
+    volumes:
+      - "{{ docker_dir }}/speedtest_tracker/config:/config"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.speed.entrypoints: "http"
+      traefik.http.routers.speed.rule: "Host(`speed.{{ domain }}`)"
+      traefik.http.middlewares.speed-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.speed.middlewares: "speed-https-redirect"
+      traefik.http.routers.speed-secure.entrypoints: "https"
+      traefik.http.routers.speed-secure.rule: "Host(`speed.{{ domain }}`)"
+      traefik.http.routers.speed-secure.tls: "true"
+      traefik.http.routers.speed-secure.service: "speed"
+      traefik.http.services.speed.loadbalancer.server.port: "80"
+      traefik.docker.network: "homelab"

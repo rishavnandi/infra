@@ -1,0 +1,38 @@
+---
+- name: Deploy kopia container
+  community.docker.docker_container:
+    name: kopia
+    image: kopia/kopia
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - /home/{{ username }}/kopia/config:/app/config
+      - /home/{{ username }}/kopia/cache:/app/cache
+      - /home/{{ username }}/kopia/logs:/app/logs
+      - /home/{{ username }}/:/data:ro
+      - /home/{{ username }}/kopia/repository:/repository
+      - /home/{{ username }}/kopia/tmp:/tmp:shared
+    env:
+      KOPIA_PASSWORD: "{{ kopia_password }}"
+      USER: "{{ username }}"
+    command:
+      - "server"
+      - "start"
+      - "--disable-csrf-token-checks"
+      - "--insecure"
+      - "--address=0.0.0.0:51515"
+      - "--server-username={{ username }}"
+      - "--server-password={{ kopia_password }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.kopia.entrypoints: "http"
+      traefik.http.routers.kopia.rule: "Host(`kopia.{{ domain }}`)"
+      traefik.http.middlewares.kopia-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.kopia.middlewares: "kopia-https-redirect"
+      traefik.http.routers.kopia-secure.entrypoints: "https"
+      traefik.http.routers.kopia-secure.rule: "Host(`kopia.{{ domain }}`)"
+      traefik.http.routers.kopia-secure.tls: "true"
+      traefik.http.routers.kopia-secure.service: "kopia"
+      traefik.http.services.kopia.loadbalancer.server.port: "51515"
+      traefik.docker.network: "homelab"

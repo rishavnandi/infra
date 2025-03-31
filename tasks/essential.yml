@@ -1,0 +1,103 @@
+---
+- name: Update apt packages
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: full
+
+- name: Check if reboot required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+
+- name: Reboot if required
+  ansible.builtin.reboot:
+    msg: "Rebooting the system to apply updates"
+  when: reboot_required_file.stat.exists
+
+- name: Install essential packages
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+
+- name: Install essential pip packages
+  ansible.builtin.pip:
+    name: "{{ pip_packages }}"
+    state: present
+    break_system_packages: true
+
+- name: Create docker directory
+  ansible.builtin.file:
+    path: "{{ docker_dir }}"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+
+- name: Create data directory
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+  loop:
+    - "{{ data_dir }}"
+    - "{{ data_dir }}/torrents"
+    - "{{ data_dir }}/torrents/movies"
+    - "{{ data_dir }}/torrents/tv"
+    - "{{ data_dir }}/torrents/books"
+    - "{{ data_dir }}/media"
+    - "{{ data_dir }}/media/movies"
+    - "{{ data_dir }}/media/tv"
+    - "{{ data_dir }}/media/books"
+
+- name: Create app directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+  loop:
+    - "{{ docker_dir }}/bazarr"
+    - "{{ docker_dir }}/beszel"
+    - "{{ docker_dir }}/code_server"
+    - "{{ docker_dir }}/dashdot"
+    - "{{ docker_dir }}/file_browser"
+    - "{{ docker_dir }}/frigate"
+    - "{{ docker_dir }}/guacamole"
+    - "{{ docker_dir }}/hoarder"
+    - "{{ docker_dir }}/homarr"
+    - "{{ docker_dir }}/home_assistant"
+    - "{{ docker_dir }}/immich"
+    - "{{ docker_dir }}/jellyfin"
+    - "{{ docker_dir }}/jellyseerr"
+    - "{{ docker_dir }}/kopia"
+    - "{{ docker_dir }}/librum"
+    - "{{ docker_dir }}/monitoring"
+    - "{{ docker_dir }}/nextcloud"
+    - "{{ docker_dir }}/portainer"
+    - "{{ docker_dir }}/prowlarr"
+    - "{{ docker_dir }}/qbittorrent"
+    - "{{ docker_dir }}/radarr"
+    - "{{ docker_dir }}/readarr"
+    - "{{ docker_dir }}/sonarr"
+    - "{{ docker_dir }}/speedtest_tracker"
+    - "{{ docker_dir }}/syncthing"
+    - "{{ docker_dir }}/tailscale"
+    - "{{ docker_dir }}/traefik"
+    - "{{ docker_dir }}/uptime_kuma"
+    - "{{ docker_dir }}/vaultwarden"
+    - "{{ docker_dir }}/vikunja"
+    - "{{ docker_dir }}/watchtower"
+
+- name: Supress login message
+  ansible.builtin.file:
+    name: /home/{{ username }}/.hushlogin
+    state: touch
+    group: "{{ username }}"
+    owner: "{{ username }}"
+    mode: "0644"
+    access_time: preserve
+    modification_time: preserve

@@ -1,0 +1,5 @@
+[homeserver]
+192.168.1.10
+
+[all:vars]
+ansible_ssh_user=rishav

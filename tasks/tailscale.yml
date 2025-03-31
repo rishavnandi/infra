@@ -1,0 +1,20 @@
+---
+- name: Deploy tailscale container
+  community.docker.docker_container:
+    name: tailscale
+    image: tailscale/tailscale
+    restart_policy: unless-stopped
+    privileged: true
+    volumes:
+      - /var/lib:/var/lib
+      - /dev/net/tun:/dev/net/tun
+    network_mode: host
+    capabilities:
+      - NET_ADMIN
+      - NET_RAW
+    env:
+      TS_ACCEPT_DNS: "true"
+      TS_AUTHKEY: "{{ tailscale_auth_key }}"
+      TS_ROUTES: "192.168.1.0/24"
+      TS_EXTRA_ARGS: "--advertise-exit-node --accept-routes"
+      TS_STATE_DIR: "/var/lib/tailscale"

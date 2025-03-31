@@ -1,0 +1,49 @@
+---
+- name: Create home assistant config directory
+  ansible.builtin.file:
+    path: "{{ docker_dir }}/home_assistant/config"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    state: directory
+
+- name: Create home assistant config file
+  ansible.builtin.copy:
+    dest: "{{ docker_dir }}/home_assistant/config/configuration.yaml"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: "0755"
+    content: |
+      http:
+        use_x_forwarded_for: true
+        trusted_proxies:
+          - 172.18.0.0/16
+        ip_ban_enabled: true
+        login_attempts_threshold: 5
+
+- name: Deploy home assistant container
+  community.docker.docker_container:
+    name: home_assistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ docker_dir }}/home_assistant/config:/config"
+      - /etc/localtime:/etc/localtime:ro
+    env:
+      TZ: "{{ timezone }}"
+    security_opts:
+      - no-new-privileges:true
+    networks:
+      - name: homelab
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.has.entrypoints: "http"
+      traefik.http.routers.has.rule: "Host(`has.{{ domain }}`)"
+      traefik.http.middlewares.has-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.has.middlewares: "has-https-redirect"
+      traefik.http.routers.has-secure.entrypoints: "https"
+      traefik.http.routers.has-secure.rule: "Host(`has.{{ domain }}`)"
+      traefik.http.routers.has-secure.tls: "true"
+      traefik.http.routers.has-secure.service: "has"
+      traefik.http.services.has.loadbalancer.server.port: "8123"
+      traefik.docker.network: "homelab"
