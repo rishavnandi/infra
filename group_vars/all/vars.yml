@@ -20,6 +20,8 @@ traefik_basic_auth_hash: "redacted"
 
 beszel_agent_key: "redacted"
 
+blinko_nextauth_secret: "redacted"
+
 codeserver_password: "redacted"
 
 kopia_password: "redacted"
@@ -31,6 +33,10 @@ immich_db_password: "redacted"
 hoarder_meili_master_key: "redacted"
 hoarder_nextauth_secret: "redacted"
 
+komodo_passkey: "redacted"
+komodo_webhook_secret: "redacted"
+komodo_jwt_secret: "redacted"
+
 vikunja_jwt_secret: "redacted"
 
 frigate_rtsp_password: "redacted"
@@ -39,7 +45,11 @@ librum_admin_password: "redacted"
 
 influxdb_token: "redacted"
 
+paperless_admin_password: "redacted"
+
 speedtest_tracker_app_key: "redacted"
+
+readarr_api_key: "redacted"
 
 homarr_secret_key: "redacted"
 

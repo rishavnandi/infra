@@ -1,0 +1,41 @@
+---
+- name: Deploy Blinko Postgres container
+  community.docker.docker_container:
+    name: blinko_postgres
+    image: postgres:14
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: mysecretpassword
+      TZ: "{{ timezone }}"
+    volumes:
+      - "{{ docker_dir }}/blinko/db:/var/lib/postgresql/data"
+
+- name: Deploy Blinko Website container
+  community.docker.docker_container:
+    name: blinko_website
+    image: blinkospace/blinko:latest
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      NODE_ENV: "production"
+      NEXTAUTH_SECRET: "{{ blinko_nextauth_secret }}"
+      DATABASE_URL: "postgresql://postgres:mysecretpassword@blinko_postgres:5432/postgres"
+    volumes:
+      - "{{ docker_dir }}/blinko:/app/.blinko"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.blinko.entrypoints: "http"
+      traefik.http.routers.blinko.rule: "Host(`blinko.{{ domain }}`)"
+      traefik.http.middlewares.blinko-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.blinko.middlewares: "blinko-https-redirect"
+      traefik.http.routers.blinko-secure.entrypoints: "https"
+      traefik.http.routers.blinko-secure.rule: "Host(`blinko.{{ domain }}`)"
+      traefik.http.routers.blinko-secure.tls: "true"
+      traefik.http.routers.blinko-secure.service: "blinko"
+      traefik.http.services.blinko.loadbalancer.server.port: "1111"
+      traefik.docker.network: "homelab"

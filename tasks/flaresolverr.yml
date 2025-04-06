@@ -1,0 +1,10 @@
+---
+- name: Deploy flaresolverr container
+  community.docker.docker_container:
+    name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    ports:
+      - "8191:8191"

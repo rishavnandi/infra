@@ -1,0 +1,67 @@
+---
+- name: Deploy broker container
+  community.docker.docker_container:
+    name: paperless_broker
+    image: docker.io/library/redis:7
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/paperless_ngx/redisdata:/data"
+
+- name: Deploy gotenberg container
+  community.docker.docker_container:
+    name: paperless_gotenberg
+    image: docker.io/gotenberg/gotenberg:8.7
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+
+- name: Deploy tika container
+  community.docker.docker_container:
+    name: paperless_tika
+    image: docker.io/apache/tika
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+
+- name: Deploy paperless_ngx container
+  community.docker.docker_container:
+    name: paperless_ngx
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/paperless_ngx/data:/usr/src/paperless/data"
+      - "{{ docker_dir }}/paperless_ngx/media:/usr/src/paperless/media"
+      - "{{ docker_dir }}/paperless_ngx/export:/usr/src/paperless/export"
+      - "{{ docker_dir }}/paperless_ngx/consume:/usr/src/paperless/consume"
+    env:
+      PUID: "{{ puid }}"
+      PGID: "{{ pgid }}"
+      PAPERLESS_TIME_ZONE: "{{ timezone }}"
+      PAPERLESS_REDIS: redis://paperless_broker:6379
+      PAPERLESS_TIKA_ENABLED: "1"
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://paperless_gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://paperless_tika:9998
+      PAPERLESS_ADMIN_USER: "admin"
+      PAPERLESS_ADMIN_PASSWORD: "{{ paperless_admin_password }}"
+      PAPERLESS_URL: "https://paperless.{{ domain }}"
+      PAPERLESS_ALLOWED_HOSTS: "paperless.{{ domain }},{{ domain }},.{{ domain }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.paperless.entrypoints: "http"
+      traefik.http.routers.paperless.rule: "Host(`paperless.{{ domain }}`)"
+      traefik.http.middlewares.paperless-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.paperless.middlewares: "paperless-https-redirect"
+      traefik.http.routers.paperless-secure.entrypoints: "https"
+      traefik.http.routers.paperless-secure.rule: "Host(`paperless.{{ domain }}`)"
+      traefik.http.routers.paperless-secure.tls: "true"
+      traefik.http.routers.paperless-secure.service: "paperless"
+      traefik.http.services.paperless.loadbalancer.server.port: "8000"
+      traefik.docker.network: "homelab"

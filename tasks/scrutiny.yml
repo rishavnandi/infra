@@ -1,0 +1,28 @@
+---
+- name: Deploy scrutiny container
+  community.docker.docker_container:
+    name: scrutiny
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    capabilities:
+      - SYS_RAWIO
+    devices:
+      - "/dev/sda"
+    volumes:
+      - /run/udev:/run/udev:ro
+      - "{{ docker_dir }}/scrutiny/config:/opt/scrutiny/config"
+      - "{{ docker_dir }}/scrutiny/influxdb:/opt/scrutiny/influxdb"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.scrutiny.entrypoints: "http"
+      traefik.http.routers.scrutiny.rule: "Host(`scrutiny.{{ domain }}`)"
+      traefik.http.middlewares.scrutiny-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.scrutiny.middlewares: "scrutiny-https-redirect"
+      traefik.http.routers.scrutiny-secure.entrypoints: "https"
+      traefik.http.routers.scrutiny-secure.rule: "Host(`scrutiny.{{ domain }}`)"
+      traefik.http.routers.scrutiny-secure.tls: "true"
+      traefik.http.routers.scrutiny-secure.service: "scrutiny"
+      traefik.http.services.scrutiny.loadbalancer.server.port: "8080"
+      traefik.docker.network: "homelab"

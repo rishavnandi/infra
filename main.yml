@@ -14,11 +14,15 @@
       ansible.builtin.include_tasks: "tasks/{{ item }}.yml"
       loop:
         - traefik
+        - adguard_home
         - bazarr
         - beszel
+        - blinko
+        - book_bounty
         - code_server
         - dashdot
         - file_browser
+        - flaresolverr
         - frigate
         - guacamole
         - hoarder
@@ -27,17 +31,22 @@
         - immich
         - jellyfin
         - jellyseerr
+        - komodo
         - kopia
         - librum
         - monitoring
         - nextcloud
+        - paperless_ngx
+        - pingvin
         - portainer
         - prowlarr
         - qbittorrent
         - radarr
         - readarr
+        - scrutiny
         - sonarr
         - speedtest_tracker
+        - stump
         - syncthing
         - tailscale
         - uptime_kuma

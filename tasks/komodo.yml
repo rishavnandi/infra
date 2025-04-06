@@ -1,0 +1,83 @@
+---
+- name: Deploy FerretDB container
+  community.docker.docker_container:
+    name: ferretdb
+    image: "ghcr.io/ferretdb/ferretdb:1"
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: "homelab"
+    log_driver: "local"
+    volumes:
+      - "{{ docker_dir}}/komodo/state:/state"
+    env:
+      FERRETDB_HANDLER: "sqlite"
+      PUID: "{{ puid }}"
+      PGID: "{{ pgid }}"
+
+- name: Deploy Komodo Core container
+  community.docker.docker_container:
+    name: komodo_core
+    image: "ghcr.io/moghtech/komodo-core:latest"
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: "homelab"
+    log_driver: "local"
+    volumes:
+      - "{{ docker_dir}}/komodo/repo_cache:/repo-cache"
+    env:
+      KOMODO_DATABASE_ADDRESS: "ferretdb"
+      KOMODO_PASSKEY: "{{ komodo_passkey }}"
+      KOMODO_HOST: "https://komodo.{{ domain }}"
+      KOMODO_TITLE: "Komodo"
+      KOMODO_FIRST_SERVER: "https://komodo_periphery:8120"
+      KOMODO_DISABLE_CONFIRM_DIALOG: "false"
+      KOMODO_MONITORING_INTERVAL: "15-sec"
+      KOMODO_RESOURCE_POLL_INTERVAL: "5-min"
+      KOMODO_JWT_TTL: "1-day"
+      KOMODO_WEBHOOK_SECRET: "{{ komodo_webhook_secret }}"
+      KOMODO_JWT_SECRET: "{{ komodo_jwt_secret }}"
+      KOMODO_LOCAL_AUTH: "true"
+      KOMODO_DISABLE_USER_REGISTRATION: "false"
+      KOMODO_ENABLE_NEW_USERS: "false"
+      KOMODO_DISABLE_NON_ADMIN_CREATE: "false"
+      KOMODO_TRANSPARENT_MODE: "false"
+      KOMODO_OIDC_ENABLED: "false"
+      KOMODO_GITHUB_OAUTH_ENABLED: "false"
+      KOMODO_GOOGLE_OAUTH_ENABLED: "false"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.komodo.entrypoints: "http"
+      traefik.http.routers.komodo.rule: "Host(`komodo.{{ domain }}`)"
+      traefik.http.middlewares.komodo-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.komodo.middlewares: "komodo-https-redirect"
+      traefik.http.routers.komodo-secure.entrypoints: "https"
+      traefik.http.routers.komodo-secure.rule: "Host(`komodo.{{ domain }}`)"
+      traefik.http.routers.komodo-secure.tls: "true"
+      traefik.http.routers.komodo-secure.service: "komodo"
+      traefik.http.services.komodo.loadbalancer.server.port: "9120"
+      traefik.docker.network: "homelab"
+
+- name: Deploy Komodo Periphery container
+  community.docker.docker_container:
+    name: komodo_periphery
+    image: "ghcr.io/moghtech/komodo-periphery:latest"
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: "homelab"
+    log_driver: "local"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/proc:/proc"
+      - "{{ docker_dir}}/komodo/:/{{ docker_dir}}/komodo/"
+    env:
+      PERIPHERY_PASSKEYS: "{{ komodo_passkey }}"
+      PERIPHERY_ROOT_DIRECTORY: "/{{ docker_dir}}/komodo/"
+      PERIPHERY_REPO_DIR: "{{ docker_dir}}/komodo/repo"
+      PERIPHERY_STACK_DIR: "{{ docker_dir}}/komodo/stacks"
+      PERIPHERY_SSL_KEY_FILE: "{{ docker_dir}}/komodo/ssl/key.pem"
+      PERIPHERY_SSL_CERT_FILE: "{{ docker_dir}}/komodo/ssl/cert.pem"
+      PERIPHERY_SSL_ENABLED: "true"
+      PERIPHERY_INCLUDE_DISK_MOUNTS: "/etc/hostname"

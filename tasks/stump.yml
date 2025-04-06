@@ -1,0 +1,23 @@
+---
+- name: Deploy stump container
+  community.docker.docker_container:
+    name: stump
+    image: aaronleopold/stump
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/stump:/config"
+      - "{{ data_dir }}/media/books:/data"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.stump.entrypoints: "http"
+      traefik.http.routers.stump.rule: "Host(`stump.{{ domain }}`)"
+      traefik.http.middlewares.stump-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.stump.middlewares: "stump-https-redirect"
+      traefik.http.routers.stump-secure.entrypoints: "https"
+      traefik.http.routers.stump-secure.rule: "Host(`stump.{{ domain }}`)"
+      traefik.http.routers.stump-secure.tls: "true"
+      traefik.http.routers.stump-secure.service: "stump"
+      traefik.http.services.stump.loadbalancer.server.port: "10801"
+      traefik.docker.network: "homelab"

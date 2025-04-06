@@ -1,0 +1,31 @@
+---
+- name: Deploy bookbounty container
+  community.docker.docker_container:
+    name: bookbounty
+    image: thewicklowwolf/bookbounty
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/bookbounty/config:/bookbounty/config"
+      - "{{ data_dir }}/media/books:/bookbounty/downloads"
+      - "/etc/localtime:/etc/localtime:ro"
+    env:
+      selected_path_type: "folder"
+      library_scan_on_completion: "true"
+      readarr_address: "http://readarr:8787"
+      readarr_api_key: "{{ readarr_api_key }}"
+      sync_schedule: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23"
+      search_type: "non-fiction"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.books.entrypoints: "http"
+      traefik.http.routers.books.rule: "Host(`books.{{ domain }}`)"
+      traefik.http.middlewares.books-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.books.middlewares: "books-https-redirect"
+      traefik.http.routers.books-secure.entrypoints: "https"
+      traefik.http.routers.books-secure.rule: "Host(`books.{{ domain }}`)"
+      traefik.http.routers.books-secure.tls: "true"
+      traefik.http.routers.books-secure.service: "books"
+      traefik.http.services.books.loadbalancer.server.port: "5000"
+      traefik.docker.network: "homelab"

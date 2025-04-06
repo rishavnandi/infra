@@ -1,0 +1,25 @@
+---
+- name: Deploy pingvin container
+  community.docker.docker_container:
+    name: pingvin
+    image: stonith404/pingvin-share
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      TRUST_PROXY: "true"
+    volumes:
+      - "{{ docker_dir }}/pingvin/data:/opt/app/backend/data"
+      - "{{ docker_dir }}/pingvin/images:/opt/app/frontend/public/img"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.pingvin.entrypoints: "http"
+      traefik.http.routers.pingvin.rule: "Host(`pingvin.{{ domain }}`)"
+      traefik.http.middlewares.pingvin-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.pingvin.middlewares: "pingvin-https-redirect"
+      traefik.http.routers.pingvin-secure.entrypoints: "https"
+      traefik.http.routers.pingvin-secure.rule: "Host(`pingvin.{{ domain }}`)"
+      traefik.http.routers.pingvin-secure.tls: "true"
+      traefik.http.routers.pingvin-secure.service: "pingvin"
+      traefik.http.services.pingvin.loadbalancer.server.port: "3000"
+      traefik.docker.network: "homelab"
