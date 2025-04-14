@@ -46,3 +46,4 @@
       traefik.http.routers.qbit-secure.service: "qbit"
       traefik.http.services.qbit.loadbalancer.server.port: "8080"
       traefik.docker.network: "homelab"
+      traefik.http.routers.qbit-secure.middlewares: "tinyauth"

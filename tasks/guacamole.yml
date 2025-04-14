@@ -20,3 +20,4 @@
       traefik.http.routers.guac-secure.service: "guac"
       traefik.http.services.guac.loadbalancer.server.port: "8080"
       traefik.docker.network: "homelab"
+      traefik.http.routers.guac-secure.middlewares: "tinyauth"

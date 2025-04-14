@@ -23,3 +23,4 @@
       traefik.http.routers.pingvin-secure.service: "pingvin"
       traefik.http.services.pingvin.loadbalancer.server.port: "3000"
       traefik.docker.network: "homelab"
+      traefik.http.routers.pingvin-secure.middlewares: "tinyauth"

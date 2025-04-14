@@ -21,6 +21,7 @@
       traefik.http.routers.beszel-secure.service: "beszel"
       traefik.http.services.beszel.loadbalancer.server.port: "8090"
       traefik.docker.network: "homelab"
+      traefik.http.routers.beszel-secure.middlewares: "tinyauth"
 
 - name: Deploy beszel-agent container
   community.docker.docker_container:

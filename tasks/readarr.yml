@@ -25,3 +25,4 @@
       traefik.http.routers.readarr-secure.service: "readarr"
       traefik.http.services.readarr.loadbalancer.server.port: "8787"
       traefik.docker.network: "homelab"
+      traefik.http.routers.readarr-secure.middlewares: "tinyauth"

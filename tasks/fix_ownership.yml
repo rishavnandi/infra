@@ -18,3 +18,21 @@
     owner: "{{ username }}"
     group: "{{ username }}"
     mode: "0600"
+
+- name: Make sure matrix directory permissions are correct
+  ansible.builtin.file:
+    path: "{{ docker_dir }}/matrix"
+    state: directory
+    recurse: true
+    owner: 991
+    group: 991
+    mode: "0755"
+
+- name: Make sure mautrix directory permissions are correct
+  ansible.builtin.file:
+    path: "{{ docker_dir }}/mautrix_whatsapp"
+    state: directory
+    recurse: true
+    owner: 1337
+    group: 1337
+    mode: "0755"

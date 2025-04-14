@@ -25,3 +25,4 @@
       traefik.http.routers.sonarr-secure.service: "sonarr"
       traefik.http.services.sonarr.loadbalancer.server.port: "8989"
       traefik.docker.network: "homelab"
+      traefik.http.routers.sonarr-secure.middlewares: "tinyauth"

@@ -27,3 +27,4 @@
       traefik.http.routers.dash-secure.service: "dash"
       traefik.http.services.dash.loadbalancer.server.port: "3001"
       traefik.docker.network: "homelab"
+      traefik.http.routers.dash-secure.middlewares: "tinyauth"

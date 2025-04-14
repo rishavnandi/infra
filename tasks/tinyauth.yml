@@ -1,0 +1,25 @@
+---
+- name: Deploy tinyauth container
+  community.docker.docker_container:
+    name: tinyauth
+    image: ghcr.io/steveiliop56/tinyauth:v3
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    env:
+      SECRET: "{{ tinyauth_secret }}"
+      APP_URL: "https://tinyauth.{{ domain }}"
+      USERS: "{{ tinyauth_user_hash }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.tinyauth.entrypoints: "http"
+      traefik.http.routers.tinyauth.rule: "Host(`tinyauth.{{ domain }}`)"
+      traefik.http.middlewares.tinyauth-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.tinyauth.middlewares: "tinyauth-https-redirect"
+      traefik.http.routers.tinyauth-secure.entrypoints: "https"
+      traefik.http.routers.tinyauth-secure.rule: "Host(`tinyauth.{{ domain }}`)"
+      traefik.http.routers.tinyauth-secure.tls: "true"
+      traefik.http.routers.tinyauth-secure.service: "tinyauth"
+      traefik.http.services.tinyauth.loadbalancer.server.port: "3000"
+      traefik.docker.network: "homelab"
+      traefik.http.middlewares.tinyauth.forwardauth.address: "http://tinyauth:3000/api/auth/traefik"

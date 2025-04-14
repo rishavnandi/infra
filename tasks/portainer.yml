@@ -24,3 +24,4 @@
       traefik.http.routers.portainer-secure.service: "portainer"
       traefik.http.services.portainer.loadbalancer.server.port: "9000"
       traefik.docker.network: "homelab"
+      traefik.http.routers.portainer-secure.middlewares: "tinyauth"

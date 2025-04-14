@@ -1,0 +1,372 @@
+---
+- name: Create matrix homeserver config
+  ansible.builtin.copy:
+    content: |
+      server_name: "matrix.{{ domain }}"
+      pid_file: /data/homeserver.pid
+      listeners:
+        - port: 8008
+          tls: false
+          type: http
+          x_forwarded: true
+          resources:
+            - names: [client, federation]
+              compress: false
+      database:
+        name: sqlite3
+        args:
+          database: /data/homeserver.db
+      log_config: "/data/matrix.{{ domain }}.log.config"
+      media_store_path: /data/media_store
+      registration_shared_secret: "{{ synapse_shared_secret }}"
+      report_stats: false
+      macaroon_secret_key: "{{ synapse_macaroon_secret }}"
+      form_secret: "{{ synapse_form_secret }}"
+      signing_key_path: "/data/matrix.{{ domain }}.signing.key"
+      public_baseurl: "https://matrix.{{ domain }}"
+      trusted_key_servers:
+        - server_name: "matrix.org"
+      app_service_config_files:
+        - /data/doublepuppet.yaml
+        - /data/registration.yaml
+    dest: "{{ docker_dir }}/matrix/data/homeserver.yaml"
+    owner: 991
+    group: 991
+    mode: 0644
+
+- name: Create matrix log config
+  ansible.builtin.copy:
+    content: |
+      version: 1
+      formatters:
+        precise:
+          format: '%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(request)s - %(message)s'
+      handlers:
+        console:
+          class: logging.StreamHandler
+          formatter: precise
+      loggers:
+        _placeholder:
+          level: "INFO"
+        synapse.storage.SQL:
+          level: INFO
+      root:
+        level: INFO
+        handlers: [console]
+      disable_existing_loggers: false
+    dest: "{{ docker_dir }}/matrix/data/matrix.{{ domain }}.log.config"
+    owner: 991
+    group: 991
+    mode: 0644
+
+- name: Create matrix signing key file
+  ansible.builtin.copy:
+    content: |
+      "{{ synapse_signing_key }}"
+    dest: "{{ docker_dir }}/matrix/data/matrix.{{ domain }}.signing.key"
+    owner: 991
+    group: 991
+    mode: 0644
+
+- name: Create matrix doublepuppet config
+  ansible.builtin.copy:
+    content: |
+      id: doublepuppet
+      url:
+      as_token: "{{ doublepuppet_as_token }}"
+      hs_token: "{{ doublepuppet_hs_token }}"
+      sender_localpart: "{{ doublepuppet_sender_localpart }}"
+      rate_limited: false
+      namespaces:
+        users:
+          - regex: '@.*:matrix\.{{ domain | replace(".", "\\.") }}'
+            exclusive: false
+    dest: "{{ docker_dir }}/matrix/data/doublepuppet.yaml"
+    owner: 991
+    group: 991
+    mode: 0644
+
+- name: Create matrix whatsapp bridge registration
+  ansible.builtin.copy:
+    content: |
+      id: whatsapp
+      url: http://mautrix-whatsapp:29318
+      as_token: "{{ mautrix_whatsapp_as_token }}"
+      hs_token: "{{ mautrix_whatsapp_hs_token }}"
+      sender_localpart: "{{ mautrix_whatsapp_sender_localpart }}"
+      rate_limited: false
+      namespaces:
+        users:
+          - regex: ^@whatsappbot:matrix\.{{ domain | replace(".", "\\.") }}$
+            exclusive: true
+          - regex: ^@whatsapp_.*:matrix\.{{ domain | replace(".", "\\.") }}$
+            exclusive: true
+      de.sorunome.msc2409.push_ephemeral: true
+      receive_ephemeral: true
+    dest: "{{ docker_dir }}/matrix/data/registration.yaml"
+    owner: 991
+    group: 991
+    mode: 0644
+
+- name: Create mautrix whatsapp config file
+  ansible.builtin.copy:
+    content: |
+    network:
+    os_name: Mautrix-WhatsApp bridge
+    browser_name: unknown
+    proxy: null
+    get_proxy_url: null
+    proxy_only_login: false
+    displayname_template: "{{or .BusinessName .PushName .Phone}} (WA)"
+    call_start_notices: true
+    identity_change_notices: false
+    send_presence_on_typing: false
+    enable_status_broadcast: true
+    disable_status_broadcast_send: true
+    mute_status_broadcast: true
+    pinned_tag: m.favourite
+    archive_tag:
+    status_broadcast_tag: m.lowpriority
+    whatsapp_thumbnail: false
+    url_previews: false
+    extev_polls: false
+    disable_view_once: false
+    force_active_delivery_receipts: false
+    direct_media_auto_request: true
+    animated_sticker:
+      target: webp
+      args:
+        width: 320
+        height: 320
+        fps: 25
+    history_sync:
+      max_initial_conversations: -1
+      request_full_sync: false
+      full_sync_config:
+        days_limit: null
+        size_mb_limit: null
+        storage_quota_mb: null
+      media_requests:
+        auto_request_media: true
+        request_method: immediate
+        request_local_time: 120
+        max_async_handle: 2
+    bridge:
+      command_prefix: "!wa"
+      personal_filtering_spaces: true
+      private_chat_portal_meta: true
+      async_events: false
+      split_portals: false
+      resend_bridge_info: false
+      no_bridge_info_state_key: false
+      bridge_status_notices: errors
+      bridge_matrix_leave: false
+      bridge_notices: false
+      tag_only_on_create: true
+      only_bridge_tags: [m.favourite, m.lowpriority]
+      mute_only_on_create: true
+      cleanup_on_logout:
+        enabled: false
+        manual:
+          private: nothing
+          relayed: nothing
+          shared_no_users: nothing
+          shared_has_users: nothing
+        bad_credentials:
+          private: nothing
+          relayed: nothing
+          shared_no_users: nothing
+          shared_has_users: nothing
+      relay:
+        enabled: false
+        admin_only: true
+        default_relays: []
+        message_formats:
+          m.text: "<b>{{ .Sender.DisambiguatedName }}</b>: {{ .Message }}"
+          m.notice: "<b>{{ .Sender.DisambiguatedName }}</b>: {{ .Message }}"
+          m.emote: "* <b>{{ .Sender.DisambiguatedName }}</b> {{ .Message }}"
+          m.file: "<b>{{ .Sender.DisambiguatedName }}</b> sent a file{{ if .Caption }}: {{ .Caption }}{{ end }}"
+          m.image: "<b>{{ .Sender.DisambiguatedName }}</b> sent an image{{ if .Caption }}: {{ .Caption }}{{ end }}"
+          m.audio: "<b>{{ .Sender.DisambiguatedName }}</b> sent an audio file{{ if .Caption }}: {{ .Caption }}{{ end }}"
+          m.video: "<b>{{ .Sender.DisambiguatedName }}</b> sent a video{{ if .Caption }}: {{ .Caption }}{{ end }}"
+          m.location: "<b>{{ .Sender.DisambiguatedName }}</b> sent a location{{ if .Caption }}: {{ .Caption }}{{ end }}"
+        displayname_format: "{{ .DisambiguatedName }}"
+      permissions:
+        "*": relay
+        "matrix.{{ domain }}": user
+        "@admin:matrix.{{ domain }}": admin
+
+    database:
+      type: sqlite3-fk-wal
+      uri: /data/whatsapp.db
+      max_open_conns: 5
+      max_idle_conns: 1
+      max_conn_idle_time: null
+      max_conn_lifetime: null
+
+    homeserver:
+      address: http://synapse:8008
+      domain: "matrix.{{ domain }}"
+      software: standard
+      status_endpoint:
+      message_send_checkpoint_endpoint:
+      async_media: false
+      websocket: false
+      ping_interval_seconds: 0
+
+    appservice:
+      address: http://mautrix-whatsapp:29318
+      public_address: "https://bridge.{{ domain }}"
+      hostname: 0.0.0.0
+      port: 29318
+      id: whatsapp
+      bot:
+        username: whatsappbot
+        displayname: WhatsApp bridge bot
+        avatar: mxc://maunium.net/NeXNQarUbrlYBiPCpprYsRqr
+      ephemeral_events: true
+      async_transactions: false
+      as_token: "{{ mautrix_whatsapp_config_as_token }}"
+      hs_token: "{{ mautrix_whatsapp_config_hs_token }}"
+      username_template: whatsapp_{{.}}
+
+    matrix:
+      message_status_events: false
+      delivery_receipts: false
+      message_error_notices: true
+      sync_direct_chat_list: true
+      federate_rooms: true
+      upload_file_threshold: 5242880
+
+    analytics:
+      token: null
+      url: https://api.segment.io/v1/track
+      user_id: null
+
+    provisioning:
+      prefix: /_matrix/provision
+      shared_secret: "{{ mautrix_whatsapp_config_shared_secret }}"
+      allow_matrix_auth: true
+      debug_endpoints: false
+
+    public_media:
+      enabled: false
+      signing_key: "{{ mautrix_whatsapp_config_signing_key }}"
+      expiry: 0
+      hash_length: 32
+
+    direct_media:
+      enabled: false
+      server_name: discord-media.example.com
+      well_known_response:
+      media_id_prefix:
+      allow_proxy: true
+      server_key: "{{ mautrix_whatsapp_config_server_key }}"
+
+    backfill:
+      enabled: false
+      max_initial_messages: 50
+      max_catchup_messages: 500
+      unread_hours_threshold: 720
+      threads:
+        max_initial_messages: 50
+      queue:
+        enabled: false
+        batch_size: 100
+        batch_delay: 20
+        max_batches: -1
+        max_batches_override: {}
+
+    double_puppet:
+      servers:
+        anotherserver.example.org: https://matrix.anotherserver.example.org
+        "matrix.{{ domain }}": "https://matrix.{{ domain }}"
+      allow_discovery: false
+      secrets:
+        "matrix.{{ domain }}": "as_token:msr0QAgxglrpe2Ag058ZiYJouxvT3jOVffDWJ3IFMcPbNRDBtK1hOvOH9WZYOB7W"
+
+    encryption:
+      allow: true
+      default: true
+      require: false
+      appservice: false
+      msc4190: false
+      allow_key_sharing: true
+      pickle_key: "{{ mautrix_whatsapp_config_pickle_key }}"
+      delete_keys:
+        delete_outbound_on_ack: false
+        dont_store_outbound: false
+        ratchet_on_decrypt: false
+        delete_fully_used_on_decrypt: false
+        delete_prev_on_new_session: false
+        delete_on_device_delete: false
+        periodically_delete_expired: false
+        delete_outdated_inbound: false
+      verification_levels:
+        receive: unverified
+        send: unverified
+        share: cross-signed-tofu
+      rotation:
+        enable_custom: false
+        milliseconds: 604800000
+        messages: 100
+        disable_device_change_key_rotation: false
+
+    logging:
+      min_level: debug
+      writers:
+        - type: stdout
+          format: pretty-colored
+        - type: file
+          format: json
+          filename: ./logs/bridge.log
+          max_size: 100
+          max_backups: 10
+          compress: false
+  dest: "{{ docker_dir }}/mautrix_whatsapp/config.yaml"
+  owner: 1337
+  group: 1337
+  mode: 0644
+
+- name: Copy over same double puppet and registration files to mautrix
+  ansible.builtin.copy:
+    src: "{{ docker_dir }}/matrix/data/{{ item }}"
+    dest: "{{ docker_dir }}/mautrix_whatsapp/{{ item }}"
+    owner: 1337
+    group: 1337
+    mode: 0644
+  loop:
+    - doublepuppet.yaml
+    - registration.yaml
+
+- name: Deploy synapse container
+  community.docker.docker_container:
+    name: synapse
+    image: matrixdotorg/synapse:latest
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/matrix/data/:/data"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.synapse.entrypoints: "http"
+      traefik.http.routers.synapse.rule: "Host(`matrix.{{ domain }}`)"
+      traefik.http.middlewares.synapse-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.synapse.middlewares: "synapse-https-redirect"
+      traefik.http.routers.synapse-secure.entrypoints: "https"
+      traefik.http.routers.synapse-secure.rule: "Host(`matrix.{{ domain }}`)"
+      traefik.http.routers.synapse-secure.tls: "true"
+      traefik.http.routers.synapse-secure.service: "synapse"
+      traefik.http.services.synapse.loadbalancer.server.port: "8008"
+      traefik.docker.network: "homelab"
+
+- name: Deploy mautrix whatsapp container
+  community.docker.docker_container:
+    name: mautrix-whatsapp
+    image: dock.mau.dev/mautrix/whatsapp
+    restart_policy: unless-stopped
+    networks:
+      - name: homelab
+    volumes:
+      - "{{ docker_dir }}/mautrix_whatsapp/:/data"

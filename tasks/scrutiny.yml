@@ -26,3 +26,4 @@
       traefik.http.routers.scrutiny-secure.service: "scrutiny"
       traefik.http.services.scrutiny.loadbalancer.server.port: "8080"
       traefik.docker.network: "homelab"
+      traefik.http.routers.scrutiny-secure.middlewares: "tinyauth"

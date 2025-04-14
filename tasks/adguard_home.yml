@@ -24,3 +24,4 @@
       traefik.http.routers.adguard-secure.service: "adguard"
       traefik.http.services.adguard.loadbalancer.server.port: "3000"
       traefik.docker.network: "homelab"
+      traefik.http.routers.adguard-secure.middlewares: "tinyauth"

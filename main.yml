@@ -19,6 +19,7 @@
         - beszel
         - blinko
         - book_bounty
+        - cf_ddns
         - code_server
         - dashdot
         - file_browser
@@ -34,6 +35,7 @@
         - komodo
         - kopia
         - librum
+        - matrix
         - monitoring
         - nextcloud
         - paperless_ngx
@@ -49,6 +51,7 @@
         - stump
         - syncthing
         - tailscale
+        - tinyauth
         - uptime_kuma
         - vaultwarden
         - vikunja

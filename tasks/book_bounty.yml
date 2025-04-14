@@ -29,3 +29,4 @@
       traefik.http.routers.books-secure.service: "books"
       traefik.http.services.books.loadbalancer.server.port: "5000"
       traefik.docker.network: "homelab"
+      traefik.http.routers.books-secure.middlewares: "tinyauth"

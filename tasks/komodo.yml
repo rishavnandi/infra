@@ -58,6 +58,7 @@
       traefik.http.routers.komodo-secure.service: "komodo"
       traefik.http.services.komodo.loadbalancer.server.port: "9120"
       traefik.docker.network: "homelab"
+      traefik.http.routers.komodo-secure.middlewares: "tinyauth"
 
 - name: Deploy Komodo Periphery container
   community.docker.docker_container:

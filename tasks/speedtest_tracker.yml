@@ -28,3 +28,4 @@
       traefik.http.routers.speed-secure.service: "speed"
       traefik.http.services.speed.loadbalancer.server.port: "80"
       traefik.docker.network: "homelab"
+      traefik.http.routers.speed-secure.middlewares: "tinyauth"

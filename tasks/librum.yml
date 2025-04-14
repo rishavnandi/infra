@@ -55,3 +55,4 @@
       traefik.http.routers.librum-secure.service: "librum"
       traefik.http.services.librum.loadbalancer.server.port: "5000"
       traefik.docker.network: "homelab"
+      traefik.http.routers.librum-secure.middlewares: "tinyauth"

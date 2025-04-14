@@ -36,3 +36,4 @@
       traefik.http.routers.kopia-secure.service: "kopia"
       traefik.http.services.kopia.loadbalancer.server.port: "51515"
       traefik.docker.network: "homelab"
+      traefik.http.routers.kopia-secure.middlewares: "tinyauth"

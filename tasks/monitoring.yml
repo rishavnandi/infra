@@ -202,6 +202,7 @@
       traefik.http.routers.grafana-secure.service: "grafana"
       traefik.http.services.grafana.loadbalancer.server.port: "3000"
       traefik.docker.network: "homelab"
+      traefik.http.routers.grafana-secure.middlewares: "tinyauth"
 
 - name: Deploy influxdb container
   community.docker.docker_container:

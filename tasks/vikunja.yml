@@ -25,3 +25,4 @@
       traefik.http.routers.vikunja-secure.service: "vikunja"
       traefik.http.services.vikunja.loadbalancer.server.port: "3456"
       traefik.docker.network: "homelab"
+      traefik.http.routers.vikunja-secure.middlewares: "tinyauth"

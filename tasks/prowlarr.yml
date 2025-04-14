@@ -24,3 +24,4 @@
       traefik.http.routers.prowlarr-secure.service: "prowlarr"
       traefik.http.services.prowlarr.loadbalancer.server.port: "9696"
       traefik.docker.network: "homelab"
+      traefik.http.routers.prowlarr-secure.middlewares: "tinyauth"

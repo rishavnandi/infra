@@ -105,3 +105,4 @@
       traefik.http.routers.frigate-secure.service: "frigate"
       traefik.http.services.frigate.loadbalancer.server.port: "8971"
       traefik.docker.network: "homelab"
+      traefik.http.routers.frigate-secure.middlewares: "tinyauth"
