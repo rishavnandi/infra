@@ -21,4 +21,3 @@
       traefik.http.routers.stump-secure.service: "stump"
       traefik.http.services.stump.loadbalancer.server.port: "10801"
       traefik.docker.network: "homelab"
-      traefik.http.routers.stump-secure.middlewares: "tinyauth"

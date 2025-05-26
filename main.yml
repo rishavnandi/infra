@@ -35,7 +35,6 @@
         - komodo
         - kopia
         - librum
-        - matrix
         - monitoring
         - nextcloud
         - paperless_ngx
@@ -56,6 +55,7 @@
         - vaultwarden
         - vikunja
         - watchtower
+        - wireguard
 
     - name: Modify ownership of data and docker_apps directories
       ansible.builtin.include_tasks: tasks/fix_ownership.yml

@@ -1,2 +1,4 @@
 # Ignore the credentials file
 infra_creds.md
+.vscode
+.ansible

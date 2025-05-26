@@ -21,32 +21,6 @@
     volumes:
       - "{{ docker_dir }}/immich/postgres:/var/lib/postgresql/data"
 
-- name: Add immich dotfiles directories
-  ansible.builtin.file:
-    path: "{{ data_dir }}/immich/photos/{{ item }}"
-    state: directory
-    mode: "0755"
-  loop:
-    - library
-    - encoded-video
-    - upload
-    - profile
-    - thumbs
-    - backups
-
-- name: Add immich dotfiles
-  ansible.builtin.file:
-    path: "{{ data_dir }}/immich/photos/{{ item }}/.immich"
-    state: touch
-    mode: "0755"
-  loop:
-    - library
-    - encoded-video
-    - upload
-    - profile
-    - thumbs
-    - backups
-
 - name: Deploy immich server container
   community.docker.docker_container:
     name: immich
@@ -56,7 +30,7 @@
       - name: homelab
     env:
       PUID: "{{ puid }}"
-      PGID: "{{ puid }}"
+      PGID: "{{ pgid }}"
       TZ: "{{ timezone }}"
       DB_HOSTNAME: immich_db
       DB_USERNAME: "{{ immich_db_username }}"
@@ -85,3 +59,4 @@
       traefik.http.routers.immich-secure.service: "immich"
       traefik.http.services.immich.loadbalancer.server.port: "8080"
       traefik.docker.network: "homelab"
+      traefik.http.routers.immich-secure.middlewares: "tinyauth"

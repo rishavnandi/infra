@@ -80,8 +80,6 @@
     - "{{ docker_dir }}/komodo"
     - "{{ docker_dir }}/kopia"
     - "{{ docker_dir }}/librum"
-    - "{{ docker_dir }}/matrix"
-    - "{{ docker_dir }}/mautrix_whatsapp"
     - "{{ docker_dir }}/monitoring"
     - "{{ docker_dir }}/nextcloud"
     - "{{ docker_dir }}/paperless_ngx"
@@ -103,6 +101,7 @@
     - "{{ docker_dir }}/vaultwarden"
     - "{{ docker_dir }}/vikunja"
     - "{{ docker_dir }}/watchtower"
+    - "{{ docker_dir }}/wireguard"
 
 - name: Supress login message
   ansible.builtin.file:

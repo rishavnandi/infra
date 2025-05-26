@@ -39,3 +39,4 @@
       traefik.http.routers.blinko-secure.service: "blinko"
       traefik.http.services.blinko.loadbalancer.server.port: "1111"
       traefik.docker.network: "homelab"
+      traefik.http.routers.blinko-secure.middlewares: "tinyauth"
